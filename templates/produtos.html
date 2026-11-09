@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Produtos | Estoque simples</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #f1f5f9; color: #172033; font: 15px Arial, sans-serif; }
+        header, main { width: min(1100px, calc(100% - 2rem)); margin: auto; }
+        header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 0; }
+        header nav { display: flex; align-items: center; gap: 1rem; }
+        main { padding-bottom: 2rem; }
+        section { margin: 1rem 0; padding: 1.25rem; background: white; border-radius: 10px; box-shadow: 0 2px 8px #1720330b; }
+        .campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .75rem; align-items: end; }
+        label { display: block; margin-bottom: .35rem; font-size: .9rem; }
+        input, button, .botao { width: 100%; padding: .65rem; border: 1px solid #cbd5e1; border-radius: 6px; font: inherit; }
+        button, .botao { border: 0; background: #2563eb; color: white; cursor: pointer; text-align: center; text-decoration: none; }
+        .secundario { background: #475569; }
+        .perigo { background: #b91c1c; }
+        .acoes { display: flex; gap: .4rem; align-items: center; }
+        .acoes form { margin: 0; }
+        .acoes a, .acoes button { width: auto; padding: .45rem .6rem; white-space: nowrap; }
+        .mensagem { padding: .75rem; border-radius: 6px; }
+        .sucesso { background: #dcfce7; color: #166534; }
+        .erro { background: #fee2e2; color: #991b1b; }
+        .tabela { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: .7rem; border-bottom: 1px solid #e2e8f0; text-align: left; }
+        th { color: #475569; }
+        .alerta { color: #b91c1c; font-weight: bold; }
+        @media (max-width: 650px) { header { align-items: flex-start; flex-direction: column; } td { min-width: 100px; } }
+    </style>
+</head>
+<body>
+<header>
+    <strong>Estoque simples</strong>
+    <nav>
+        <span>Olá, {{ session.get('nome', 'usuário') }}</span>
+        <a href="{{ url_for('estoque.listar') }}">Movimentações</a>
+        <form action="{{ url_for('auth.sair') }}" method="post">
+            <button class="secundario" type="submit">Sair</button>
+        </form>
+    </nav>
+</header>
+<main>
+    <h1>Produtos</h1>
+    {% with mensagens = get_flashed_messages(with_categories=true) %}
+        {% for categoria, mensagem in mensagens %}
+            <p class="mensagem {{ categoria }}" role="status">{{ mensagem }}</p>
+        {% endfor %}
+    {% endwith %}
+
+    <section>
+        <h2>{{ "Editar produto" if produto_edicao else "Cadastrar produto" }}</h2>
+        <form action="{{ url_for('produtos.atualizar', produto_id=produto_edicao.id) if produto_edicao else url_for('produtos.criar') }}" method="post">
+            <div class="campos">
+                <div>
+                    <label for="nome">Nome</label>
+                    <input id="nome" name="nome" maxlength="120" value="{{ produto_edicao.nome if produto_edicao else '' }}" required>
+                </div>
+                <div>
+                    <label for="valor">Valor (R$)</label>
+                    <input id="valor" name="valor" type="number" min="0" step="0.01" value="{{ produto_edicao.valor if produto_edicao else '' }}" required>
+                </div>
+                {% if not produto_edicao %}
+                <div>
+                    <label for="quantidade">Quantidade inicial</label>
+                    <input id="quantidade" name="quantidade" type="number" min="0" value="0" required>
+                </div>
+                {% endif %}
+                <div>
+                    <label for="estoque_minimo">Estoque mínimo</label>
+                    <input id="estoque_minimo" name="estoque_minimo" type="number" min="0" value="{{ produto_edicao.estoque_minimo if produto_edicao else '0' }}" required>
+                </div>
+                <div>
+                    <label for="estoque_maximo">Estoque máximo</label>
+                    <input id="estoque_maximo" name="estoque_maximo" type="number" min="0" value="{{ produto_edicao.estoque_maximo if produto_edicao else '100' }}" required>
+                </div>
+                <div>
+                    <button type="submit">{{ "Salvar alterações" if produto_edicao else "Cadastrar produto" }}</button>
+                    {% if produto_edicao %}<a class="botao secundario" href="{{ url_for('produtos.listar') }}">Cancelar</a>{% endif %}
+                </div>
+            </div>
+        </form>
+    </section>
+
+    <section>
+        <h2>Produtos cadastrados</h2>
+        <div class="tabela">
+            <table>
+                <thead>
+                    <tr><th>Produto</th><th>Valor</th><th>Quantidade</th><th>Limites</th><th>Ações</th></tr>
+                </thead>
+                <tbody>
+                    {% for produto in produtos %}
+                    <tr>
+                        <td>{{ produto.nome }}</td>
+                        <td>R$ {{ "%.2f"|format(produto.valor) }}</td>
+                        <td class="{{ 'alerta' if produto.quantidade <= produto.estoque_minimo else '' }}">{{ produto.quantidade }}{% if produto.quantidade <= produto.estoque_minimo %} · estoque baixo{% endif %}</td>
+                        <td>{{ produto.estoque_minimo }}–{{ produto.estoque_maximo }}</td>
+                        <td class="acoes">
+                            <a class="botao secundario" href="{{ url_for('produtos.editar', produto_id=produto.id) }}">Editar</a>
+                            <form action="{{ url_for('produtos.excluir', produto_id=produto.id) }}" method="post" onsubmit="return confirm('Excluir este produto?')">
+                                <button class="perigo" type="submit">Excluir</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5">Nenhum produto cadastrado.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+</body>
+</html>

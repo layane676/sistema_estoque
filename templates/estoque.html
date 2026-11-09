@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Movimentações | Estoque simples</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #f1f5f9; color: #172033; font: 15px Arial, sans-serif; }
+        header, main { width: min(1000px, calc(100% - 2rem)); margin: auto; }
+        header { display: flex; justify-content: space-between; align-items: center; padding: 1.25rem 0; }
+        section { margin: 1rem 0; padding: 1.25rem; background: white; border-radius: 10px; }
+        .mensagem { padding: .75rem; border-radius: 6px; }
+        .sucesso { background: #dcfce7; color: #166534; }
+        .erro { background: #fee2e2; color: #991b1b; }
+        .produto { display: grid; grid-template-columns: 2fr 1fr auto; gap: .75rem; align-items: end; padding: .75rem 0; border-bottom: 1px solid #e2e8f0; }
+        label { display: block; margin-bottom: .35rem; }
+        input, select, button { width: 100%; padding: .65rem; border: 1px solid #cbd5e1; border-radius: 6px; font: inherit; }
+        button { border: 0; background: #2563eb; color: white; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: .7rem; border-bottom: 1px solid #e2e8f0; text-align: left; }
+        .tabela { overflow-x: auto; }
+        @media (max-width: 600px) { .produto { grid-template-columns: 1fr; } header { align-items: flex-start; flex-direction: column; gap: .5rem; } }
+    </style>
+</head>
+<body>
+<header>
+    <strong>Estoque simples</strong>
+    <nav><a href="{{ url_for('produtos.listar') }}">Voltar aos produtos</a></nav>
+</header>
+<main>
+    <h1>Movimentações de estoque</h1>
+    {% with mensagens = get_flashed_messages(with_categories=true) %}
+        {% for categoria, mensagem in mensagens %}
+            <p class="mensagem {{ categoria }}" role="status">{{ mensagem }}</p>
+        {% endfor %}
+    {% endwith %}
+    <section>
+        <h2>Registrar entrada ou saída</h2>
+        {% for produto in produtos %}
+        <form class="produto" action="{{ url_for('estoque.movimentar', produto_id=produto.id) }}" method="post">
+            <div>
+                <strong>{{ produto.nome }}</strong> · saldo {{ produto.quantidade }} de {{ produto.estoque_maximo }}
+                {% if produto.quantidade <= produto.estoque_minimo %}<span style="color:#b91c1c"> · estoque baixo</span>{% endif %}
+            </div>
+            <div>
+                <label for="tipo-{{ produto.id }}">Tipo e quantidade</label>
+                <div style="display:flex;gap:.4rem">
+                    <select id="tipo-{{ produto.id }}" name="tipo">
+                        <option>Entrada</option>
+                        <option>Saída</option>
+                    </select>
+                    <input name="quantidade" type="number" min="1" value="1" required aria-label="Quantidade">
+                </div>
+            </div>
+            <button type="submit">Registrar</button>
+        </form>
+        {% else %}
+        <p>Cadastre um produto antes de registrar movimentações.</p>
+        {% endfor %}
+    </section>
+    <section>
+        <h2>Histórico recente</h2>
+        <div class="tabela">
+            <table>
+                <thead><tr><th>Data e hora</th><th>Produto</th><th>Tipo</th><th>Quantidade</th></tr></thead>
+                <tbody>
+                    {% for movimento in movimentacoes %}
+                    <tr>
+                        <td>{{ movimento.data_hora.replace("T", " ") }}</td>
+                        <td>{{ movimento.nome }}</td>
+                        <td>{{ movimento.tipo }}</td>
+                        <td>{{ movimento.quantidade }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4">Nenhuma movimentação registrada.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+</body>
+</html>
